@@ -1,4 +1,12 @@
 import { Chain, getDefaultConfig } from '@rainbow-me/rainbowkit';
+import {
+  arbitrum,
+  base,
+  mainnet,
+  optimism,
+  polygon,
+  sepolia,
+} from 'wagmi/chains';
 
 const anvil: Chain = {
     id: 31_337,
@@ -14,14 +22,6 @@ const anvil: Chain = {
     },
     testnet: true
 }
-import {
-  arbitrum,
-  base,
-  mainnet,
-  optimism,
-  polygon,
-  sepolia,
-} from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'RainbowKit demo',
@@ -33,6 +33,7 @@ export const config = getDefaultConfig({
     arbitrum,
     base,
     anvil,
+    sepolia,
     ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true' ? [sepolia] : []),
   ],
   ssr: true,
