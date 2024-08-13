@@ -8,13 +8,17 @@ import { useEffect, useState } from "react";
 import { Presets, Client } from "userop";
 import { encodeFunctionData } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
+import { getChainId } from '@wagmi/core'
+import { config } from "@/src/wagmi";
+import { SafeAccountV0_2_0 as SafeAccount, calculateUserOperationMaxGasCost, MetaTransaction } from "abstractionkit";
 const ChatterJson = require("../../../chatter-foundry/out/Chatter.sol/Chatter.json");
 const chatterAddress = process.env.NEXT_PUBLIC_ADDRESS_SEPOLIA;
 
-const rpcUrl = process.env.NEXT_PUBLIC_PAYMASTER_NODE as string;
-const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER as string; // Optional - you can get one at https://app.stackup.sh/
+const rpcUrlNode = process.env.NEXT_PUBLIC_PAYMASTER_NODE as string;
+const bundlerUrl = process.env.NEXT_PUBLIC_BUNLDER_URL as string; // Optional - you can get one at https://app.stackup.sh/
+const privateKey = process.env.NEXT_PUBLIC_PRIVATE_KEY as string;
 
-export default function Stackup() {
+export default function Candide() {
     const [connnectedAddress, setConnectAddress] = useState<`0x${string}` | undefined>();
     const { address } = useAccount();
 
@@ -22,33 +26,21 @@ export default function Stackup() {
 
     const [useSmartWallet, setUseSmartWallet] = useState<boolean>(false);
 
-    const [builder, setBuilder] = useState<Presets.Builder.SimpleAccount>();
+    const chainId = getChainId(config);
 
     useEffect(() => {
         console.log(useSmartWallet);
         if (useSmartWallet && signer) {
             setConnectAddress(undefined);
-            const paymasterContext = { type: "payg" };
-            const paymasterMiddleware = Presets.Middleware.verifyingPaymaster(
-                paymasterUrl,
-                paymasterContext
-            );
-            const opts =
-                paymasterUrl === "" ? {} : {
-                    paymasterMiddleware: paymasterMiddleware,
-                };
-            Presets.Builder.SimpleAccount.init(signer, rpcUrl, opts).then(
-                (builder) => {
-                    const smartWalletAddress = builder.getSender();
-                    console.log(
-                        `Account address: ${address} with smart contract address ${smartWalletAddress}`
-                    );
-                    setConnectAddress(smartWalletAddress as `0x${string}`);
-                    setBuilder(builder);
-                }
-            );
+            const smartAccount = SafeAccount.initializeNewAccount([address as `0x${string}`]);
+
+            setConnectAddress(smartAccount.accountAddress as `0x${string}`);
+
+            console.log("the chain id is: " + chainId)
         } else {
             setConnectAddress(address);
+
+            console.log("the chain id is: " + chainId)
         }
     }, [useSmartWallet]);
 
@@ -58,35 +50,68 @@ export default function Stackup() {
     const handleSendMessage = async () => {
         try {
             if (useSmartWallet && connnectedAddress) {
-                if (builder) {
 
-                    // Encode the calls
-                    const callTo = [chatterAddress as string];
-                    const data = encodeFunctionData({
-                        abi: ChatterJson.abi,
-                        functionName: "setMessage",
-                        args: [message],
-                    });
-                    const callData = [data];
+                let smartAccount = SafeAccount.initializeNewAccount(
+                    [address as string],
+                )
 
-                    Client.init(rpcUrl).then(async (client) => {
-                        const res = await client.sendUserOperation(
-                            builder.executeBatch(callTo, callData),
-                            {
-                                onBuild: (op) => console.log("Signed UserOperation:", op),
-                            }
-                        );
+                const data = encodeFunctionData({
+                    abi: ChatterJson.abi,
+                    functionName: "setMessage",
+                    args: [message],
+                });
 
-                        // Return receipt
-                        console.log(`UserOpHash: ${res.userOpHash}`);
-                        console.log("Waiting for transaction...");
-                        const ev = await res.wait();
-                        console.log(`Transaction hash: ${ev?.transactionHash ?? null}`);
-                        console.log(
-                            `View here: https://jiffyscan.xyz/userOpHash/${res.userOpHash}`
-                        );
-                    });
+                const callData = SafeAccount.createAccountCallDataSingleTransaction({
+                    to: chatterAddress as `0x${string}`,
+                    value: BigInt(0),
+                    data: data
+                });
+
+                const transaction1: MetaTransaction = {
+                    to: chatterAddress as `0x${string}`,
+                    value: BigInt(0),
+                    data: data
                 }
+
+                console.log("callData: " + callData);
+
+                let userOperation = await smartAccount.createUserOperation(
+                    [transaction1], // you can batch multiple transactions to be executed in one userop
+                    rpcUrlNode, // the node rpc is used to fetch the current nonce and fetch gas prices.
+                    bundlerUrl, // the bundler rpc is used to estimate the gas limits
+                    // {
+                    //     verificationGasLimit: BigInt(500000)
+                    // }
+                )
+
+                const cost = calculateUserOperationMaxGasCost(userOperation)
+
+                console.log("This useroperation may cost upto : " + cost + " wei")
+                console.log("Please fund the sender account : " + userOperation.sender + " with more than " + cost + " wei")
+
+                userOperation.signature = smartAccount.signUserOperation(
+                    userOperation,
+                    [privateKey],
+                    BigInt(chainId)
+                )
+                console.log(userOperation)
+
+                const sendUserOperationResponse = await smartAccount.sendUserOperation(
+                    userOperation, bundlerUrl
+                )
+
+                console.log("Useroperation sent. Waiting to be included ......")
+
+                let userOperationReceiptResult = await sendUserOperationResponse.included()
+
+                console.log("Useroperation receipt received.")
+                console.log(userOperationReceiptResult)
+                if (userOperationReceiptResult.success) {
+                    console.log("The transaction hash is : " + userOperationReceiptResult.receipt.transactionHash)
+                } else {
+                    console.log("Useroperation execution failed")
+                }
+
             } else {
                 writeContract({
                     abi: ChatterJson.abi,
