@@ -5,7 +5,7 @@ import { useBlockNumber, usePublicClient, useWatchContractEvent } from "wagmi";
 import ChatMessage from "./ChatMessage";
 
 const ChatterJson = require("../../chatter-foundry/out/Chatter.sol/Chatter.json");
-const chatterAddress = process.env.NEXT_PUBLIC_ADDRESS_SEPOLIA;
+const chatterAddress = process.env.NEXT_PUBLIC_ADDRESS_ANVIL;
 
 export default function MessageHistory({
   address,
