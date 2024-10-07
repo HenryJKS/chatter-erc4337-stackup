@@ -1,66 +1,30 @@
-## Foundry
+# Decentralized Chat Application with ERC-4337 and Foundry
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+### Overview
 
-Foundry consists of:
+This repository hosts the Solidity contract for a decentralized chat application built on the Ethereum blockchain. Our goal is to create a secure and transparent messaging platform, leveraging the benefits of blockchain technology.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+### Technologies Used
 
-## Documentation
+- Solidity: Smart contract programming language
+- Ethereum: Blockchain for smart contracts
+- Foundry: Ethereum development kit for testing and deployment
+- ERC-4337: Ethereum standard for account abstraction (future integration)
 
-https://book.getfoundry.sh/
+---
 
-## Usage
+### ERC-4337 Integration
 
-### Build
+ERC-4337 offers several advantages, including:
 
-```shell
-$ forge build
-```
+- Account Abstraction: Enables more flexible and customizable accounts.
+- Paymasters: Allows for more efficient gas fee payments.
+- Improved User Experience: Simplifies interactions with smart contracts.
 
-### Test
+To integrate ERC-4337 into this project, we will need to:
 
-```shell
-$ forge test
-```
+- Implement an Entry Point Contract: This contract will be responsible for validating and executing transactions.
+- Create UserOperations: Transactions will be encapsulated in UserOperations to be sent to the Entry Point.
+- Configure Paymasters: Implement a mechanism to pay for gas fees.
 
-### Format
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
